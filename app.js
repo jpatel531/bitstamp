@@ -1,4 +1,4 @@
-var React = require('react');
+var React = require('react/addons');
 var rd3 = require('react-d3')
 var LineChart = rd3.LineChart;
 
@@ -28,76 +28,47 @@ var BitStampChart = React.createClass({
 		this.channel = this.pusher.subscribe("diff_order_book");
 	},
 
-	updateValues: function(data, key){
+	updateValues: function(values, key){
 		var time = Date.parse(new Date()) / 1000
 
-
-		var _values = _.map(data[key], function(value){
-			// console.log(value);
+		var values = _.map(values, function(value){
 			return {x: time, y: parseInt(value[0])}
 		});
 
-		var _newState = this.state[key].values.concat(_values)
-		// var _newState = _newState.slice(Math.max(_newState.length - 30), 1);
+		var update = {}
+		update[key] = {values: {$push: values}}
 
-		var newState = {}
-		newState[key] = {name: key, values: _newState}
-		// console.log(newState);
-		return newState
+		var updatedState =  React.addons.update(this.state, update);
+
+		return updatedState
 	},
 
 	componentDidMount: function() {
 		this.channel.bind('data', function(data){
 
-			if (data.asks.length > 0) {
-				var updatedAsks = this.updateValues(data, 'asks')
-				this.setState(updatedAsks)
-			}
-
-			if (data.bids.length > 0) {
-				var updatedBids = this.updateValues(data, 'bids')
-				this.setState(updatedBids);
-			}
+			_.each(data, function(values, key){
+				if (values.length > 0){
+					var updatedValues = this.updateValues(values, key);
+					this.setState(updatedValues)
+				}
+			}.bind(this));
 
 		}, this);
-
-		// var counter = 0;
-
-		// var self = this;
-		// setInterval(function(){
-		// 	var askValues = self.state.asks.values
-		// 	var newAsks = self.state.asks.values.concat({x: counter, y: counter})
-
-		// 	var newState = {asks: {name: "asks", values: newAsks}}
-
-		// 	self.setState(newState)
-		// 	counter ++;
-		// }, 1000)
 
 	},
 
 	render: function() {
 
-		// var lineData = [
-		//   {
-		//     name: "series1",
-		//     values: [ { x: 0, y: 20 }, { x: 24, y: 10 } ]
-		//   },
-		//   {
-		//     name: "series2",
-		//     values: [ { x: 70, y: 82 }, { x: 76, y: 82 } ]
-		//   }
-		// ];
+		// console.log('rendering')
 
-		// var lineData = [this.state.asks]
-		// , this.state.bids]
+		var lineData = [this.state.asks, this.state.bids]
 
-		// console.log(lineData)
+		console.log(lineData);
 
 		return (
 			<LineChart
 			  legend={true}
-			  data={[this.state.asks, this.state.bids]}
+			  data={lineData}
 			  width={1200}
 			  height={600}
 			  title="Line Chart"/>
